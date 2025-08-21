@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LEGO DNA Sequencer + Image Frame</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #ffffff; /* Changed to white */
+      padding: 2em;
+      margin: 0;
+      text-align: center;
+    }
+
+    h1 {
+      color: #2c3e50;
+      font-size: 2em;
+    }
+
+    .input-area {
+      margin: 2em 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .lego-button {
+      width: 60px;
+      height: 60px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1.5em;
+    }
+
+    .red { background-color: #e74c3c; color: white; }
+    .yellow { background-color: #f1c40f; }
+    .blue { background-color: #3498db; color: white; }
+    .green { background-color: #2ecc71; color: white; }
+
+    #sequence-display {
+      font-size: 1.2em;
+      margin-top: 1em;
+    }
+
+    #visual-sequence {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      gap: 4px;
+    }
+
+    .color-block {
+      width: 25px;
+      height: 25px;
+      border-radius: 4px;
+    }
+
+    .buttons {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button#analyze, button#reset, button#download {
+      padding: 10px 20px;
+      font-size: 1.2em;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    button#analyze {
+      background-color: #8e44ad;
+      color: white;
+    }
+
+    button#reset {
+      background-color: #95a5a6;
+      color: white;
+    }
+
+    button#download {
+      background-color: #27ae60;
+      color: white;
+    }
+
+    #result {
+      margin-top: 2em;
+      font-size: 1.5em;
+      font-weight: bold;
+      padding: 1em;
+    }
+
+    canvas {
+      display: block;
+      margin: 2em auto;
+      max-width: 90vw;
+    }
+
+    @media (max-width: 600px) {
+      .lego-button {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2em;
+      }
+
+      h1 {
+        font-size: 1.5em;
+      }
+
+      .color-block {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .fruit-button {
+      width: 100px;
+      height: 100px;
+      border: none;
+      border-radius: 50%;
+      font-size: 2.5em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .tomato {
+      background-color: #e74c3c; /* Tomato red */
+    }
+
+    .banana {
+      background-color: #f1c40f; /* Banana yellow */
+    }
+
+    .kiwi {
+      background-color: #2ecc71; /* Kiwi green */
+    }
+
+    .fruit-button:hover {
+      transform: scale(1.1);
+      transition: transform 0.2s;
+    }
+
+    .strawberry {
+      background-color: #ff4d88; /* Strawberry pink */
+    }
+  </style>
+</head>
+<body>
+
+  <h1>LEGO DNA Sequencer</h1>
+  <p>Select a fruit to generate its DNA sequence and frame your image with it!</p>
+
+  <div class="input-area">
+    <button class="fruit-button strawberry" data-fruit="Strawberry">🍓</button>
+    <button class="fruit-button banana" data-fruit="Banana">🍌</button>
+    <button class="fruit-button kiwi" data-fruit="Kiwi">🥝</button>
+  </div>
+
+  <div id="sequence-display">Sequence: <span id="sequence"></span></div>
+  <div id="visual-sequence"></div>
+
+  <div class="buttons">
+    <button id="analyze">Run Sequencer</button>
+    <button id="reset">Reset</button>
+  </div>
+
+  <div style="margin-top:2em;">
+    <input type="file" id="upload" accept="image/*">
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div class="buttons">
+      <button id="download" style="display:none;">Print Framed Image</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <footer style="margin-top: 3em; text-align: center;">
+    <p>Created by Interfaculty Bioinformatics Unit from the University of Bern</p>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Logo_Universit%C3%A4t_Bern.svg/1200px-Logo_Universit%C3%A4t_Bern.svg.png" alt="University of Bern Logo" style="max-width: 200px; height: auto;">
+  </footer>
+
+  <script>
+    const sequenceEl = document.getElementById("sequence");
+    const resultEl = document.getElementById("result");
+    const visualEl = document.getElementById("visual-sequence");
+    const canvas = document.getElementById("canvas");
+    const downloadBtn = document.getElementById("download");
+    const ctx = canvas.getContext("2d");
+
+    let sequence = "";
+    let colorSequence = [];
+    let uploadedImage = null;
+
+    const baseColors = {
+      A: "#e74c3c",
+      T: "#f1c40f",
+      G: "#3498db",
+      C: "#2ecc71"
+    };
+
+    const fruitSequences = {
+      Strawberry: "AGCTTAGCTAGCTTAGCT", // Sequence for Strawberry
+      Banana: "TTTAAAAGCCGTGTGTGT",
+      Kiwi: "GCGTACCGTGCGAGTTGA"
+    };
+
+    const outcomes = {
+      "AGCTTAGCTAGCTTAGCT": "🍓 Strawberry DNA: Sweet and full of flavor!",
+      "TTTAAAAGCCGTGTGTGT": "🍌 Banana DNA: High in potassium!",
+      "GCGTACCGTGCGAGTTGA": "🥝 Kiwi DNA: Packed with vitamin C!"
+    };
+
+    document.querySelectorAll(".fruit-button").forEach(button => {
+      button.addEventListener("click", () => {
+        const fruit = button.getAttribute("data-fruit");
+        sequence = fruitSequences[fruit];
+        colorSequence = sequence.split("").map(base => baseColors[base]);
+        sequenceEl.textContent = sequence;
+
+        visualEl.innerHTML = ""; // Clear previous visual sequence
+        colorSequence.forEach(color => {
+          const colorBlock = document.createElement("div");
+          colorBlock.classList.add("color-block");
+          colorBlock.style.backgroundColor = color;
+          visualEl.appendChild(colorBlock);
+        });
+      });
+    });
+
+    document.getElementById("analyze").addEventListener("click", () => {
+      if (!sequence) {
+        resultEl.textContent = "Please select a fruit to generate a sequence!";
+        return;
+      }
+
+      const message = outcomes[sequence] || "🧫 Unknown Genetic Signature! Try a different code.";
+      resultEl.textContent = message;
+
+      if (uploadedImage) {
+        const img = uploadedImage;
+        const borderSize = 40;
+        const width = img.width + borderSize * 2;
+        const height = img.height + borderSize * 2;
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.clearRect(0, 0, width, height);
+
+        // Create the repeating pattern for the DNA sequence
+        const patternCanvas = document.createElement("canvas");
+        const pctx = patternCanvas.getContext("2d");
+        const blockSize = 10; // Size of each DNA base block
+        patternCanvas.width = sequence.length * blockSize;
+        patternCanvas.height = blockSize;
+
+        for (let i = 0; i < sequence.length; i++) {
+          pctx.fillStyle = baseColors[sequence[i]];
+          pctx.fillRect(i * blockSize, 0, blockSize, blockSize);
+        }
+
+        const pattern = ctx.createPattern(patternCanvas, "repeat");
+
+        // Draw the top border
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, width, borderSize);
+
+        // Draw the bottom border
+        ctx.fillRect(0, height - borderSize, width, borderSize);
+
+        // Draw the left border
+        ctx.save();
+        ctx.translate(0, 0);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillRect(-height, 0, height, borderSize);
+        ctx.restore();
+
+        // Draw the right border
+        ctx.save();
+        ctx.translate(width, 0);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillRect(0, 0, height, borderSize);
+        ctx.restore();
+
+        // Draw the uploaded image
+        ctx.drawImage(img, borderSize, borderSize);
+
+        // Overlay the fruit name and emoji on the image with a fully transparent background
+        ctx.fillStyle = "transparent"; // Fully transparent background
+        ctx.fillRect(borderSize, borderSize + img.height * 0.75, img.width, img.height * 0.25);
+        ctx.fillStyle = "black"; // Text color
+        const fontSize = Math.floor(img.width * 0.04);
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.textAlign = "center";
+        ctx.fillText(message, width / 2, borderSize + img.height * 0.875);
+
+        canvas.style.display = "block";
+        downloadBtn.style.display = "inline-block";
+      }
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      sequence = "";
+      colorSequence = [];
+      sequenceEl.textContent = "";
+      resultEl.textContent = "";
+      visualEl.innerHTML = "";
+      uploadedImage = null;
+      canvas.style.display = "none";
+      downloadBtn.style.display = "none";
+    });
+
+    document.getElementById("upload").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          uploadedImage = img;
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = "framed_dna_image.png";
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+  </script>
+</body>
+</html>
