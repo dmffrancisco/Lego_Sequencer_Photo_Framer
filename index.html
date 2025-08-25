@@ -248,7 +248,9 @@
 
       if (uploadedImage) {
         const img = uploadedImage;
-        const borderSize = 40;
+
+        // Dynamically calculate border size (5% of the smaller dimension of the image)
+        const borderSize = Math.max(40, Math.min(img.width, img.height) * 0.05);
         const width = img.width + borderSize * 2;
         const height = img.height + borderSize * 2;
 
@@ -294,10 +296,10 @@
         // Draw the uploaded image
         ctx.drawImage(img, borderSize, borderSize);
 
-        // Overlay the fruit name and emoji on the image with a fully transparent background
-        ctx.fillStyle = "transparent"; // Fully transparent background
+        // Overlay the fruit name and emoji on the image with a semi-transparent background
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; // Semi-transparent black background
         ctx.fillRect(borderSize, borderSize + img.height * 0.75, img.width, img.height * 0.25);
-        ctx.fillStyle = "black"; // Text color
+        ctx.fillStyle = "white"; // Text color
         const fontSize = Math.floor(img.width * 0.04);
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = "center";
