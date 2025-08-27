@@ -86,7 +86,15 @@
     }
 
     button#download {
-      background-color: #27ae60;
+      padding: 10px 20px;
+      font-size: 1.2em;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    button#download {
+      background-color: #46b3ba;
       color: white;
     }
 
@@ -125,12 +133,27 @@
       height: 100px;
       border: none;
       border-radius: 50%;
-      font-size: 2.5em;
+      font-size: 1.2em; /* Reduced font size */
       cursor: pointer;
       display: flex;
+      flex-direction: column; /* Stack emoji and text vertically */
       align-items: center;
       justify-content: center;
       color: white;
+      text-align: center; /* Ensures multi-line text is centered */
+      padding: 5px; /* Adds padding for better spacing */
+      box-sizing: border-box; /* Ensures padding doesn't affect button size */
+    }
+
+    .fruit-button span {
+      display: block;
+      font-size: 1em; /* Reduced font size for the text */
+      margin-top: 5px; /* Adds spacing between the emoji and text */
+    }
+
+    .fruit-button .emoji {
+      font-size: 1.8em; /* Larger font size for the emoji */
+      line-height: 1; /* Ensures the emoji is not misaligned */
     }
 
     .tomato {
@@ -153,6 +176,31 @@
     .strawberry {
       background-color: #ff4d88; /* Strawberry pink */
     }
+
+    /* Strawberry Buttons */
+    .strawberry-light {
+      background-color: #ff6fa5; /* Lighter Strawberry Pink */
+    }
+    .strawberry-dark {
+      background-color: #ff4d88; /* Darker Strawberry Pink */
+    }
+
+    /* Banana Buttons */
+    .banana-light {
+      background-color: #f9e79f; /* Lighter Banana Yellow */
+    }
+    .banana-dark {
+      background-color: #f1c40f; /* Darker Banana Yellow */
+    }
+
+    /* Kiwi Buttons */
+    .kiwi-light {
+      background-color: #a3e4d7; /* Lighter Kiwi Green */
+    }
+    .kiwi-dark {
+      background-color: #2ecc71; /* Darker Kiwi Green */
+    }
+
   </style>
 </head>
 <body>
@@ -161,9 +209,35 @@
   <p>Select a fruit to generate its DNA sequence and frame your image with it!</p>
 
   <div class="input-area">
-    <button class="fruit-button strawberry" data-fruit="Strawberry">🍓</button>
-    <button class="fruit-button banana" data-fruit="Banana">🍌</button>
-    <button class="fruit-button kiwi" data-fruit="Kiwi">🥝</button>
+    <!-- Strawberry Buttons -->
+    <button class="fruit-button strawberry-light" data-fruit="Strawberry" data-sequence="0">
+      <span class="emoji">🍓</span>
+      <span>FaMYB10</span>
+    </button>
+    <button class="fruit-button strawberry-dark" data-fruit="Strawberry" data-sequence="1">
+      <span class="emoji">🍓</span>
+      <span>GAST</span>
+    </button>
+
+    <!-- Banana Buttons -->
+    <button class="fruit-button banana-light" data-fruit="Banana" data-sequence="0">
+      <span class="emoji">🍌</span>
+      <span>EXP1</span>
+    </button>
+    <button class="fruit-button banana-dark" data-fruit="Banana" data-sequence="1">
+      <span class="emoji">🍌</span>
+      <span>NYC1</span>
+    </button>
+
+    <!-- Kiwi Buttons -->
+    <button class="fruit-button kiwi-light" data-fruit="Kiwi" data-sequence="0">
+      <span class="emoji">🥝</span>
+      <span>STAY</span>
+    </button>
+    <button class="fruit-button kiwi-dark" data-fruit="Kiwi" data-sequence="1">
+      <span class="emoji">🥝</span>
+      <span>NAP1</span>
+    </button>
   </div>
 
   <div id="sequence-display">Sequence: <span id="sequence"></span></div>
@@ -174,15 +248,19 @@
     <button id="reset">Reset</button>
   </div>
 
-  <div style="margin-top:2em;">
+  <div style="margin-top: 2em;">
+    <!-- Styled file input -->
+    <label id="upload-label" for="upload"></label>
     <input type="file" id="upload" accept="image/*">
-    <canvas id="canvas" style="display:none;"></canvas>
+
+    <!-- Styled download button -->
     <div class="buttons">
-      <button id="download" style="display:none;">Print Framed Image</button>
+      <button id="new-download" style="display:none;">Download Framed Image</button>
     </div>
   </div>
 
   <div id="result"></div>
+  <div id="canvas-container" style="margin-top: 2em; text-align: center;"></div>
 
   <footer style="margin-top: 3em; text-align: center;">
     <p>Created by Interfaculty Bioinformatics Unit from the University of Bern</p>
@@ -193,8 +271,9 @@
     const sequenceEl = document.getElementById("sequence");
     const resultEl = document.getElementById("result");
     const visualEl = document.getElementById("visual-sequence");
-    const canvas = document.getElementById("canvas");
+    const canvas = document.createElement("canvas");
     const downloadBtn = document.getElementById("download");
+    const newDownloadBtn = document.getElementById("new-download");
     const ctx = canvas.getContext("2d");
 
     let sequence = "";
@@ -202,28 +281,36 @@
     let uploadedImage = null;
 
     const baseColors = {
-      A: "#e74c3c",
-      T: "#f1c40f",
-      G: "#3498db",
-      C: "#2ecc71"
+      A: "#3498db",
+      T: "#2ecc71",
+      G: "#f1c40f",
+      C: "#e74c3c"
     };
 
     const fruitSequences = {
-      Strawberry: "AGCTTAGCTAGCTTAGCT", // Sequence for Strawberry
-      Banana: "TTTAAAAGCCGTGTGTGT",
-      Kiwi: "GCGTACCGTGCGAGTTGA"
+      Strawberry: ["CAATGATGTGAAGAACTATTGGAATACTTA", "TATCGTCTCGGCCTCACCTGTGCAAGCGGG"], // Two sequences for Strawberry
+      Banana: ["TGTTTGCTCACTCACGACTCCAATCTTTCT", "ACATTGCAAAGCTGGACCGCGAAATGTTGT"], // Two sequences for Banana
+      Kiwi: ["GAGTGGAAGAAGGTTAGAGAGACAATGTCT", "ATTCGTCCGAGCGTTTCACCTTGGGGCGCT"] // Two sequences for Kiwi
     };
 
     const outcomes = {
-      "AGCTTAGCTAGCTTAGCT": "🍓 Strawberry DNA: Sweet and full of flavor!",
-      "TTTAAAAGCCGTGTGTGT": "🍌 Banana DNA: High in potassium!",
-      "GCGTACCGTGCGAGTTGA": "🥝 Kiwi DNA: Packed with vitamin C!"
+      "CAATGATGTGAAGAACTATTGGAATACTTA": "🍓 Strawberry DNA: Sweet and full of flavor!",
+      "TATCGTCTCGGCCTCACCTGTGCAAGCGGG": "🍓 Strawberry DNA: A fruity delight!",
+      "TGTTTGCTCACTCACGACTCCAATCTTTCT": "🍌 Banana DNA: High in potassium!",
+      "ACATTGCAAAGCTGGACCGCGAAATGTTGT": "🍌 Banana DNA: A tropical treat!",
+      "GAGTGGAAGAAGGTTAGAGAGACAATGTCT": "🥝 Kiwi DNA: Packed with vitamin C!",
+      "ATTCGTCCGAGCGTTTCACCTTGGGGCGCT": "🥝 Kiwi DNA: A refreshing burst!"
     };
 
     document.querySelectorAll(".fruit-button").forEach(button => {
       button.addEventListener("click", () => {
         const fruit = button.getAttribute("data-fruit");
-        sequence = fruitSequences[fruit];
+        const sequenceIndex = parseInt(button.getAttribute("data-sequence"), 10);
+
+        // Select the specific sequence based on the button clicked
+        const sequences = fruitSequences[fruit];
+        sequence = sequences[sequenceIndex];
+
         colorSequence = sequence.split("").map(base => baseColors[base]);
         sequenceEl.textContent = sequence;
 
@@ -305,8 +392,14 @@
         ctx.textAlign = "center";
         ctx.fillText(message, width / 2, borderSize + img.height * 0.875);
 
+        // Append the canvas to the DOM to display it
+        const canvasContainer = document.getElementById("canvas-container");
+        canvasContainer.innerHTML = ""; // Clear any previous canvas
+        canvasContainer.appendChild(canvas);
+
+        // Show the new download button after everything is drawn
         canvas.style.display = "block";
-        downloadBtn.style.display = "inline-block";
+        newDownloadBtn.style.display = "inline-block";
       }
     });
 
@@ -319,6 +412,7 @@
       uploadedImage = null;
       canvas.style.display = "none";
       downloadBtn.style.display = "none";
+      newDownloadBtn.style.display = "none";
     });
 
     document.getElementById("upload").addEventListener("change", (e) => {
@@ -336,11 +430,29 @@
       reader.readAsDataURL(file);
     });
 
-    downloadBtn.addEventListener("click", () => {
+    newDownloadBtn.addEventListener("click", () => {
+      if (!canvas || !uploadedImage) {
+        resultEl.textContent = "Please generate the frame before downloading!";
+        return;
+      }
+
+      // Create a link element to trigger the download
       const link = document.createElement("a");
-      link.download = "framed_dna_image.png";
-      link.href = canvas.toDataURL();
-      link.click();
+      link.download = "framed_dna_image.png"; // Set the filename
+      link.href = canvas.toDataURL("image/png"); // Convert the canvas to a PNG data URL
+      link.click(); // Trigger the download
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      if (!canvas || !uploadedImage) {
+        resultEl.textContent = "Please generate the frame before downloading!";
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.download = "framed_dna_image.png"; // Set the filename
+      link.href = canvas.toDataURL("image/png"); // Convert the canvas to a PNG data URL
+      link.click(); // Trigger the download
     });
   </script>
 </body>
