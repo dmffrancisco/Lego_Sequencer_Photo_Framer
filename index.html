@@ -336,14 +336,14 @@
       if (uploadedImage) {
         const img = uploadedImage;
 
-        // Dynamically calculate border size (5% of the smaller dimension of the image)
-        const borderSize = Math.max(40, Math.min(img.width, img.height) * 0.05);
-        const width = img.width + borderSize * 2;
-        const height = img.height + borderSize * 2;
+        // Set the canvas dimensions to DIN A6 size (1240 x 1748 pixels)
+        const canvasWidth = 1240; // Width in pixels
+        const canvasHeight = 1748; // Height in pixels
+        const borderSize = Math.max(40, Math.min(canvasWidth, canvasHeight) * 0.05); // 5% border size
 
-        canvas.width = width;
-        canvas.height = height;
-        ctx.clearRect(0, 0, width, height);
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
         // Create the repeating pattern for the DNA sequence
         const patternCanvas = document.createElement("canvas");
@@ -361,36 +361,38 @@
 
         // Draw the top border
         ctx.fillStyle = pattern;
-        ctx.fillRect(0, 0, width, borderSize);
+        ctx.fillRect(0, 0, canvasWidth, borderSize);
 
         // Draw the bottom border
-        ctx.fillRect(0, height - borderSize, width, borderSize);
+        ctx.fillRect(0, canvasHeight - borderSize, canvasWidth, borderSize);
 
         // Draw the left border
         ctx.save();
         ctx.translate(0, 0);
         ctx.rotate(-Math.PI / 2);
-        ctx.fillRect(-height, 0, height, borderSize);
+        ctx.fillRect(-canvasHeight, 0, canvasHeight, borderSize);
         ctx.restore();
 
         // Draw the right border
         ctx.save();
-        ctx.translate(width, 0);
+        ctx.translate(canvasWidth, 0);
         ctx.rotate(Math.PI / 2);
-        ctx.fillRect(0, 0, height, borderSize);
+        ctx.fillRect(0, 0, canvasHeight, borderSize);
         ctx.restore();
 
         // Draw the uploaded image
-        ctx.drawImage(img, borderSize, borderSize);
+        const imageWidth = canvasWidth - borderSize * 2;
+        const imageHeight = canvasHeight - borderSize * 2;
+        ctx.drawImage(img, borderSize, borderSize, imageWidth, imageHeight);
 
         // Overlay the fruit name and emoji on the image with a semi-transparent background
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; // Semi-transparent black background
-        ctx.fillRect(borderSize, borderSize + img.height * 0.75, img.width, img.height * 0.25);
+        ctx.fillRect(borderSize, borderSize + imageHeight * 0.75, imageWidth, imageHeight * 0.25);
         ctx.fillStyle = "white"; // Text color
-        const fontSize = Math.floor(img.width * 0.04);
+        const fontSize = Math.floor(imageWidth * 0.04);
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = "center";
-        ctx.fillText(message, width / 2, borderSize + img.height * 0.875);
+        ctx.fillText(message, canvasWidth / 2, borderSize + imageHeight * 0.875);
 
         // Append the canvas to the DOM to display it
         const canvasContainer = document.getElementById("canvas-container");
